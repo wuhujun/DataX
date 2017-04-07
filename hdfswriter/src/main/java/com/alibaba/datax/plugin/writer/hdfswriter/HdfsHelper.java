@@ -6,6 +6,8 @@ import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.plugin.RecordReceiver;
 import com.alibaba.datax.common.plugin.TaskPluginCollector;
 import com.alibaba.datax.common.util.Configuration;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -38,9 +40,24 @@ public  class HdfsHelper {
     private String  kerberosKeytabFilePath;
     private String  kerberosPrincipal;
 
+
+    //添加hdfs 高可用模式
+    private static  final String  HDFS_DEFAULTFS_KEY  = "fs.defaultFS" ;
+
     public void getFileSystem(String defaultFS, Configuration taskConfig){
         hadoopConf = new org.apache.hadoop.conf.Configuration();
-        hadoopConf.set("fs.defaultFS", defaultFS);
+        hadoopConf.set(HDFS_DEFAULTFS_KEY, defaultFS);
+
+        //添加hadoop 其他扩展配置参数。
+        Configuration hadoopSiteParams = taskConfig.getConfiguration(Key.HADOOP_CONFIG);
+        JSONObject hadoopSiteParamsAsJsonObject = JSON.parseObject(taskConfig.getString(Key.HADOOP_CONFIG));
+        if (null != hadoopSiteParams) {
+            Set<String> paramKeys = hadoopSiteParams.getKeys();
+            for (String each : paramKeys) {
+                hadoopConf.set(each, hadoopSiteParamsAsJsonObject.getString(each));
+            }
+        }
+
         //是否有Kerberos认证
         this.haveKerberos = taskConfig.getBool(Key.HAVE_KERBEROS, false);
         if(haveKerberos){
